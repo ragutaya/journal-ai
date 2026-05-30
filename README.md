@@ -1,0 +1,2 @@
+# journal-ai
+journal companion
