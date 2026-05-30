@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Journal AI</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f0f1a;
+  color: #fff;
+  height: 100vh;
+  overflow: hidden;
+}
+.screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0f0f1a;
+  flex-direction: column;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+.header {
+  padding: 48px 20px 14px;
+  background: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.header h1 { font-size: 20px; font-weight: 700; }
+.header-btn {
+  background: none; border: none;
+  color: #4f46e5; font-size: 15px;
+  cursor: pointer; padding: 4px 8px;
+}
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+.tabs {
+  display: flex;
+  background: #1a1a2e;
+  border-top: 1px solid #2a2a3e;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 58px;
+  z-index: 100;
+}
+.tab {
+  flex: 1; display: flex;
+  flex-direction: column;
+  align-items: center; justify-content: center;
+  background: none; border: none;
+  color: #6b6b8a; font-size: 11px;
+  cursor: pointer; gap: 2px;
+}
+.tab.active { color: #4f46e5; }
+.tab-icon { font-size: 20px; }
+.form-group { margin-bottom: 20px; }
+label { display: block; font-size: 13px; color: #a0a0c0; margin-bottom: 6px; }
+input[type="text"], input[type="password"], textarea {
+  width: 100%;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  font-family: inherit;
+}
+input:focus, textarea:focus { border-color: #4f46e5; }
+textarea { resize: none; }
+.btn {
+  width: 100%; padding: 14px;
+  background: #4f46e5; color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 16px; font-weight: 600;
+  cursor: pointer; margin-bottom: 10px;
+}
+.btn:disabled { opacity: 0.5; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid #4f46e5;
+  color: #4f46e5;
+}
+.card {
+  background: #1a1a2e; border-radius: 12px;
+  padding: 16px; margin-bottom: 12px;
+  border-left: 3px solid #4f46e5;
+  cursor: pointer;
+}
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.card-meta { font-size: 12px; color: #6b6b8a; margin-bottom: 6px; }
+.card-preview { font-size: 13px; color: #a0a0c0; line-height: 1.5; }
+.tag {
+  display: inline-block;
+  background: #2a2a3e; color: #a0a0c0;
+  font-size: 11px; padding: 2px 8px;
+  border-radius: 20px; margin-right: 4px;
+}
+.center {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex: 1; text-align: center; padding: 32px;
+}
+.emoji-big { font-size: 52px; margin-bottom: 16px; }
+.subtitle { color: #a0a0c0; font-size: 15px; line-height: 1.6; }
+.status {
+  padding: 10px 14px; border-radius: 8px;
+  font-size: 13px; margin-bottom: 16px; line-height: 1.5;
+}
+.status-info { background: #1e1e3a; color: #a0a0c0; border: 1px solid #2a2a3e; }
+.status-error { background: #2a1010; color: #f87171; border: 1px solid #4a1010; }
+.status-success { background: #0a2a1a; color: #34d399; border: 1px solid #0a4a2a; }
+.text-muted { color: #6b6b8a; font-size: 13px; margin-top: 6px; }
+.chat-messages {
+  flex: 1; overflow-y: auto;
+  padding: 16px; padding-bottom: 16px;
+  display: flex; flex-direction: column;
+}
+.bubble {
+  max-width: 82%; padding: 12px 14px;
+  border-radius: 16px; margin-bottom: 8px;
+  font-size: 15px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+}
+.bubble-user {
+  background: #4f46e5; color: #fff;
+  align-self: flex-end; border-bottom-right-radius: 4px;
+}
+.bubble-ai {
+  background: #1a1a2e; color: #d0d0e8;
+  align-self: flex-start; border-bottom-left-radius: 4px;
+}
+.chat-input-row {
+  padding: 10px 12px 72px;
+  background: #1a1a2e;
+  display: flex; gap: 8px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  background: #0f0f1a;
+  border: 1px solid #2a2a3e;
+  border-radius: 20px;
+  padding: 10px 16px;
+  color: #fff; font-size: 15px;
+  outline: none; max-height: 120px;
+  overflow-y: auto; font-family: inherit;
+  resize: none; line-height: 1.4;
+}
+.chat-input:focus { border-color: #4f46e5; }
+.send-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%; background: #4f46e5;
+  border: none; color: #fff;
+  font-size: 18px; cursor: pointer;
+  flex-shrink: 0;
+}
+.send-btn:disabled { background: #2a2a4a; }
+.fab {
+  position: fixed; bottom: 74px; right: 20px;
+  width: 52px; height: 52px;
+  border-radius: 50%; background: #4f46e5;
+  border: none; color: #fff; font-size: 26px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(79,70,229,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 99;
+}
+</style>
+</head>
+<body>
+
+<!-- ── SETTINGS SCREEN ──────────────────────────────── -->
+<div id="screen-settings" class="screen">
+  <div class="header"><h1>⚙️ Settings</h1></div>
+  <div class="page-content">
+    <div id="settings-status" class="status status-info">
+      Enter your API keys below. They are saved only on this device — never sent anywhere except directly to Anthropic and Voyage AI.
+    </div>
+    <div class="form-group">
+      <label>Anthropic API Key</label>
+      <input type="password" id="input-anthropic-key" placeholder="sk-ant-..." autocomplete="off">
+      <p class="text-muted">Get yours at console.anthropic.com</p>
+    </div>
+    <div class="form-group">
+      <label>Voyage AI API Key</label>
+      <input type="password" id="input-voyage-key" placeholder="pa-..." autocomplete="off">
+      <p class="text-muted">Get yours at dash.voyageai.com</p>
+    </div>
+    <button class="btn" onclick="saveSettings()">Save &amp; Continue</button>
+  </div>
+</div>
+
+<!-- ── IMPORT SCREEN ────────────────────────────────── -->
+<div id="screen-import" class="screen">
+  <div class="header">
+    <h1>📥 Import Journal</h1>
+    <button class="header-btn" onclick="showScreen('settings')">⚙️</button>
+  </div>
+  <div class="page-content">
+    <div class="center" style="padding-top:0; min-height: 60vh;">
+      <div class="emoji-big">📂</div>
+      <p class="subtitle">Upload your <strong>journal_index.json</strong> from Google Drive to load your journal history.</p>
+      <div style="margin-top: 28px; width: 100%;">
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+        <button class="btn" onclick="document.getElementById('import-file').click()">Choose journal_index.json</button>
+        <button class="btn btn-outline" onclick="skipImport()">Skip — start fresh</button>
+      </div>
+      <div id="import-status" style="margin-top: 16px; width: 100%;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── JOURNAL LIST SCREEN ──────────────────────────── -->
+<div id="screen-journal" class="screen">
+  <div class="header">
+    <h1>📓 Journal</h1>
+    <button class="header-btn" onclick="showScreen('settings')">⚙️</button>
+  </div>
+  <div class="page-content" id="journal-list"></div>
+  <button class="fab" onclick="newEntry()">＋</button>
+  <div class="tabs">
+    <button class="tab active" id="tab-journal" onclick="switchTab('journal')">
+      <span class="tab-icon">📓</span>Journal
+    </button>
+    <button class="tab" id="tab-chat" onclick="switchTab('chat')">
+      <span class="tab-icon">🤖</span>Chat
+    </button>
+  </div>
+</div>
+
+<!-- ── ENTRY SCREEN ─────────────────────────────────── -->
+<div id="screen-entry" class="screen">
+  <div class="header">
+    <button class="header-btn" onclick="goBackFromEntry()">← Back</button>
+    <h1 id="entry-header-title">New Entry</h1>
+    <button class="header-btn" id="entry-save-btn" onclick="saveEntry()">Save</button>
+  </div>
+  <div class="page-content">
+    <div class="form-group">
+      <label>Date / Title</label>
+      <input type="text" id="entry-title" placeholder="e.g. May 30, 2026">
+    </div>
+    <div class="form-group">
+      <label>Entry</label>
+      <textarea id="entry-content" rows="16" placeholder="What's on your mind..."></textarea>
+    </div>
+    <div id="entry-status"></div>
+  </div>
+</div>
+
+<!-- ── CHAT SCREEN ──────────────────────────────────── -->
+<div id="screen-chat" class="screen">
+  <div class="header">
+    <h1>🤖 Chat</h1>
+    <span id="chat-count" style="font-size:12px; color:#6b6b8a;"></span>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row">
+    <textarea class="chat-input" id="chat-input" placeholder="Say something..." rows="1"
+      onkeydown="chatKeydown(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendChat()">↑</button>
+  </div>
+  <div class="tabs">
+    <button class="tab" id="tab-journal2" onclick="switchTab('journal')">
+      <span class="tab-icon">📓</span>Journal
+    </button>
+    <button class="tab active" id="tab-chat2" onclick="switchTab('chat')">
+      <span class="tab-icon">🤖</span>Chat
+    </button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  anthropicKey: '',
+  voyageKey: '',
+  entries: [],
+  chatHistory: [],
+  currentEntry: null,
+};
+
+// ═══════════════════════════════════════════════════════
+// INDEXEDDB
+// ═══════════════════════════════════════════════════════
+let db;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('journal-ai-v1', 1);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('entries'))
+        d.createObjectStore('entries', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('settings'))
+        d.createObjectStore('settings', { keyPath: 'key' });
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(); };
+    req.onerror = reject;
+  });
+}
+
+function dbPut(store, val) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(val);
+    tx.oncomplete = res;
+    tx.onerror = rej;
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = rej;
+  });
+}
+
+function dbGetAll(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = rej;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+async function loadSettings() {
+  const a = await dbGet('settings', 'anthropicKey');
+  const v = await dbGet('settings', 'voyageKey');
+  if (a) state.anthropicKey = a.value;
+  if (v) state.voyageKey = v.value;
+}
+
+async function saveSettings() {
+  const aKey = document.getElementById('input-anthropic-key').value.trim();
+  const vKey = document.getElementById('input-voyage-key').value.trim();
+  const statusEl = document.getElementById('settings-status');
+
+  if (!aKey || !vKey) {
+    statusEl.className = 'status status-error';
+    statusEl.textContent = 'Please enter both API keys.';
+    return;
+  }
+
+  await dbPut('settings', { key: 'anthropicKey', value: aKey });
+  await dbPut('settings', { key: 'voyageKey', value: vKey });
+  state.anthropicKey = aKey;
+  state.voyageKey = vKey;
+
+  statusEl.className = 'status status-success';
+  statusEl.textContent = 'Keys saved!';
+
+  setTimeout(() => {
+    if (state.entries.length === 0) showScreen('import');
+    else { showScreen('journal'); renderList(); }
+  }, 700);
+}
+
+// ═══════════════════════════════════════════════════════
+// IMPORT
+// ═══════════════════════════════════════════════════════
+async function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('import-status');
+  statusEl.innerHTML = '<div class="status status-info">Reading file...</div>';
+
+  try {
+    const text = await file.text();
+    const index = JSON.parse(text);
+
+    if (!index.entries || !Array.isArray(index.entries))
+      throw new Error('Invalid file. Make sure this is journal_index.json from the ingest notebook.');
+
+    statusEl.innerHTML = '<div class="status status-info">Saving ' + index.entries.length + ' entries to device...</div>';
+
+    for (const entry of index.entries) {
+      await dbPut('entries', entry);
+    }
+    state.entries = await dbGetAll('entries');
+
+    statusEl.innerHTML = '<div class="status status-success">✅ Imported ' + state.entries.length + ' entries!</div>';
+    setTimeout(() => { showScreen('journal'); renderList(); }, 1000);
+
+  } catch (err) {
+    statusEl.innerHTML = '<div class="status status-error">❌ ' + err.message + '</div>';
+  }
+}
+
+function skipImport() {
+  showScreen('journal');
+  renderList();
+}
+
+// ═══════════════════════════════════════════════════════
+// JOURNAL LIST
+// ═══════════════════════════════════════════════════════
+function renderList() {
+  const el = document.getElementById('journal-list');
+  if (state.entries.length === 0) {
+    el.innerHTML = '<div class="center"><div class="emoji-big">✍️</div><p class="subtitle">No entries yet.<br>Tap + to write your first one.</p></div>';
+    return;
+  }
+  const sorted = [...state.entries].sort((a, b) => (b.date_iso || '').localeCompare(a.date_iso || ''));
+  el.innerHTML = sorted.map(e => `
+    <div class="card" onclick="viewEntry('${esc(e.id)}')">
+      <div class="card-title">${esc(e.date)}</div>
+      <div class="card-meta">
+        ${e.mood && e.mood !== 'neutral' ? '<span class="tag">' + esc(e.mood) + '</span>' : ''}
+        ${e.location ? '<span class="tag">📍 ' + esc(e.location) + '</span>' : ''}
+      </div>
+      <div class="card-preview">${esc(e.text.substring(0, 120))}${e.text.length > 120 ? '…' : ''}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// ENTRY SCREEN
+// ═══════════════════════════════════════════════════════
+function newEntry() {
+  state.currentEntry = null;
+  document.getElementById('entry-header-title').textContent = 'New Entry';
+  document.getElementById('entry-title').value = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('entry-content').value = '';
+  document.getElementById('entry-status').innerHTML = '';
+  showScreen('entry');
+}
+
+function viewEntry(id) {
+  const entry = state.entries.find(e => e.id === id);
+  if (!entry) return;
+  state.currentEntry = entry;
+  document.getElementById('entry-header-title').textContent = 'Edit Entry';
+  document.getElementById('entry-title').value = entry.date;
+  document.getElementById('entry-content').value = entry.text;
+  document.getElementById('entry-status').innerHTML = '';
+  showScreen('entry');
+}
+
+function goBackFromEntry() {
+  showScreen('journal');
+  renderList();
+}
+
+async function saveEntry() {
+  const title = document.getElementById('entry-title').value.trim();
+  const content = document.getElementById('entry-content').value.trim();
+  const statusEl = document.getElementById('entry-status');
+  const saveBtn = document.getElementById('entry-save-btn');
+
+  if (!title || !content) {
+    statusEl.innerHTML = '<div class="status status-error">Please fill in both fields.</div>';
+    return;
+  }
+
+  saveBtn.textContent = 'Saving...';
+  saveBtn.disabled = true;
+  statusEl.innerHTML = '<div class="status status-info">Generating embedding...</div>';
+
+  try {
+    const embedding = await getEmbedding('Date: ' + title + '\n' + content, 'document');
+    const entry = {
+      id: state.currentEntry ? state.currentEntry.id : String(Date.now()),
+      date: title,
+      date_iso: new Date().toISOString().split('T')[0],
+      text: content,
+      mood: state.currentEntry ? state.currentEntry.mood : 'neutral',
+      location: state.currentEntry ? state.currentEntry.location : null,
+      embedding,
+    };
+
+    await dbPut('entries', entry);
+    const idx = state.entries.findIndex(e => e.id === entry.id);
+    if (idx >= 0) state.entries[idx] = entry;
+    else state.entries.push(entry);
+
+    statusEl.innerHTML = '<div class="status status-success">✅ Saved!</div>';
+    setTimeout(() => goBackFromEntry(), 700);
+
+  } catch (err) {
+    statusEl.innerHTML = '<div class="status status-error">❌ ' + err.message + '</div>';
+  } finally {
+    saveBtn.textContent = 'Save';
+    saveBtn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// VOYAGE AI — EMBEDDINGS
+// ═══════════════════════════════════════════════════════
+async function getEmbedding(text, inputType) {
+  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + state.voyageKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ input: [text], model: 'voyage-3', input_type: inputType }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error('Voyage AI error: ' + (err.detail || res.statusText));
+  }
+  const data = await res.json();
+  return data.data[0].embedding;
+}
+
+// ═══════════════════════════════════════════════════════
+// RAG — COSINE SIMILARITY
+// ═══════════════════════════════════════════════════════
+function cosine(a, b) {
+  let dot = 0, mA = 0, mB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    mA += a[i] * a[i];
+    mB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(mA) * Math.sqrt(mB));
+}
+
+async function findRelevant(query, topK) {
+  const qEmbed = await getEmbedding(query, 'query');
+  return state.entries
+    .filter(e => e.embedding && e.embedding.length)
+    .map(e => ({ ...e, score: cosine(qEmbed, e.embedding) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+}
+
+// ═══════════════════════════════════════════════════════
+// CLAUDE API
+// ═══════════════════════════════════════════════════════
+function buildSystem(relevant) {
+  const ctx = relevant.map(e =>
+    '[' + e.date + (e.mood && e.mood !== 'neutral' ? ' — ' + e.mood : '') + ']\n' + e.text
+  ).join('\n\n---\n\n');
+
+  return `You are a warm, honest personal companion who knows Renzie deeply through his journal. You have access to his most relevant past entries for this conversation.
+
+Your role:
+- Talk like a trusted friend who has read his journal — not a therapist or coach.
+- Reference or quote his past entries when it genuinely helps remind him of lessons he's already written.
+- Ask thoughtful questions that help him reflect and grow.
+- Be direct and honest, not just agreeable.
+
+Most relevant journal entries for this conversation:
+
+${ctx}`;
+}
+
+async function callClaude(relevant, userMessage) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': state.anthropicKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-allow-browser': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: buildSystem(relevant),
+      messages: [
+        ...state.chatHistory,
+        { role: 'user', content: userMessage },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error('Claude error: ' + (err.error?.message || res.statusText));
+  }
+
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+// ═══════════════════════════════════════════════════════
+// CHAT SCREEN
+// ═══════════════════════════════════════════════════════
+let chatInitialized = false;
+
+function initChat() {
+  const count = state.entries.filter(e => e.embedding).length;
+  document.getElementById('chat-count').textContent = count + ' entries loaded';
+  if (!chatInitialized) {
+    chatInitialized = true;
+    addBubble('ai', "Hey Renzie! I've read through your journal. What's on your mind?");
+  }
+}
+
+function addBubble(role, text) {
+  const el = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'bubble bubble-' + role;
+  div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-btn');
+  const msg = input.value.trim();
+  if (!msg || sendBtn.disabled) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  sendBtn.disabled = true;
+  addBubble('user', msg);
+
+  const thinking = addBubble('ai', 'thinking…');
+  thinking.style.color = '#6b6b8a';
+
+  try {
+    const relevant = await findRelevant(msg, 10);
+    const reply = await callClaude(relevant, msg);
+    thinking.remove();
+    addBubble('ai', reply);
+
+    state.chatHistory.push({ role: 'user', content: msg });
+    state.chatHistory.push({ role: 'assistant', content: reply });
+    if (state.chatHistory.length > 20)
+      state.chatHistory = state.chatHistory.slice(-20);
+
+  } catch (err) {
+    thinking.remove();
+    addBubble('ai', '❌ ' + err.message);
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+function chatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'chat') initChat();
+}
+
+function switchTab(tab) {
+  if (tab === 'journal') {
+    showScreen('journal');
+    document.getElementById('tab-journal').classList.add('active');
+    document.getElementById('tab-chat').classList.remove('active');
+  } else {
+    showScreen('chat');
+    document.getElementById('tab-chat').classList.add('active');
+    document.getElementById('tab-journal').classList.remove('active');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+async function init() {
+  await initDB();
+  await loadSettings();
+  state.entries = await dbGetAll('entries');
+
+  if (!state.anthropicKey || !state.voyageKey) {
+    if (state.anthropicKey) document.getElementById('input-anthropic-key').value = state.anthropicKey;
+    if (state.voyageKey) document.getElementById('input-voyage-key').value = state.voyageKey;
+    showScreen('settings');
+  } else if (state.entries.length === 0) {
+    showScreen('import');
+  } else {
+    showScreen('journal');
+    renderList();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
